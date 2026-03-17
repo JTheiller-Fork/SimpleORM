@@ -27,7 +27,7 @@ SimpleORM is a Delphi ORM library that simplifies CRUD operations. It supports m
 ### Core Interfaces (`SimpleInterface.pas`)
 
 All core contracts are defined here. Key interfaces:
-- **`iSimpleDAO<T>`** - Main DAO interface for CRUD operations (Insert/Update/Delete/Find), batch operations (InsertBatch/UpdateBatch/DeleteBatch), ForceDelete, and Logger
+- **`iSimpleDAO<T>`** - Main DAO interface for CRUD operations (Insert/Update/Delete/Find), batch operations (InsertBatch/UpdateBatch/DeleteBatch/BulkInsert), Exists, Ask (NL Query), FindAs (DTO mapping), ForceDelete, and Logger
 - **`iSimpleDAOSQLAttribute<T>`** - Fluent SQL builder (Fields/Where/Join/OrderBy/GroupBy/Skip/Take), accessed via `iSimpleDAO.SQL` and returned via `.&End`
 - **`iSimpleQuery`** - Database connection abstraction (SQL/Params/ExecSQL/Open/DataSet) with transaction control (StartTransaction/Commit/Rollback/InTransaction) and SQLType
 - **`iSimpleRTTI<T>`** - RTTI introspection for entity-to-SQL mapping, including SoftDeleteField detection
@@ -39,7 +39,7 @@ All core contracts are defined here. Key interfaces:
 Custom attributes for mapping Delphi classes to database tables:
 - `Tabela('NAME')` - Maps class to table name
 - `Campo('NAME')` - Maps property to column name (optional if property name matches column)
-- `PK`, `FK`, `AutoInc`, `NotNull`, `NotZero`, `Ignore`, `NumberOnly` - Field metadata
+- `PK`, `FK`, `AutoInc`, `NotNull`, `NotZero`, `Ignore`, `NumberOnly`, `Automapping` - Field metadata
 - `Bind('FIELD')` - Maps form components to entity properties for automatic UI binding
 - `Display('NAME')` - Grid column header text
 - `Format(size, precision)` - Field formatting and validation constraints (MaxSize/MinSize validated by TSimpleValidator)
@@ -118,3 +118,16 @@ Class helpers on `TRttiProperty`, `TRttiType`, and `TRttiField` that provide att
 - **Every new feature MUST include a sample project** in `samples/` demonstrating the feature — without a sample, the feature is NOT complete
 - **Every new feature MUST include DUnit tests** in `tests/` — without tests, the feature is NOT complete
 - **Never create `.dproj`, `.res`, or `.dfm` files** — these are generated exclusively by the Delphi IDE. Only create `.dpr` (program files) and `.pas` (unit files)
+- **Minimum Delphi version**: 10.2 Tokyo — NO inline variables, NO managed records
+- `BulkInsert` generates single INSERT with multiple VALUES (batches of 100) for performance
+- `Exists(field, value)` is a convenience method for checking record existence without loading
+- `FindAs<R>` maps query results to DTO classes without `[Tabela]` attribute
+- `Ask(question)` on DAO uses AI to convert natural language to SQL and execute
+- `TSimpleEventBus` provides global observer pattern for entity Insert/Update/Delete events
+- `Automapping` attribute enables convention-over-configuration (class name = table name)
+- `TSimpleSwagger` generates OpenAPI 3.0 specs from registered entities via RTTI
+- `TSimpleSeeder` generates realistic test data via AI based on entity RTTI schema
+- `TSimpleAutoIndex` analyzes slow queries and suggests CREATE INDEX via AI
+- `TSimpleQueryOptimizer` analyzes SQL and suggests optimizations via AI
+- `TSkillTelegram`/`TSkillDiscord` send notifications when entities change
+- `TSimpleExportSheets` exports entity data to Google Sheets via API

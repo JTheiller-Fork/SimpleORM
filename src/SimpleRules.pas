@@ -217,6 +217,7 @@ var
   LLeftValue: Variant;
   LRightValue: Variant;
   LRightStr: String;
+  LFloat: Double;
 begin
   LLeftValue := GetPropertyValue(aObj, aLeft, aContext);
 
@@ -226,7 +227,6 @@ begin
     LRightValue := Copy(LRightStr, 2, Length(LRightStr) - 2)
   else
   begin
-    var LFloat: Double;
     if TryStrToFloat(LRightStr, LFloat) then
       LRightValue := LFloat
     else

@@ -8,6 +8,61 @@ O formato e baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0
 
 ---
 
+## [3.07.00] - 2026-03-16
+
+### Added
+- **Exists** - Metodo DAO.Exists(campo, valor) para verificar existencia de registro sem carregar entidade (SimpleDAO.pas)
+- **Automapping** - Atributo [Automapping] para convencao sobre configuracao: classe sem [Tabela] deriva nome da tabela automaticamente (SimpleAttributes.pas, SimpleRTTI.pas)
+- **TSimpleEventBus** - Sistema global de eventos/observers para Insert/Update/Delete com Subscribe por classe ou global (SimpleEvents.pas)
+- **BulkInsert** - INSERT otimizado com multiplos VALUES em unico SQL, batches de 100, suporte a Enumerator/UUID (SimpleDAO.pas)
+- **FindAs** - Mapeamento de resultado SQL para classes DTO sem [Tabela], usando RawSQL ou query builder (SimpleDAO.pas)
+- **TSimpleNLQuery** - Natural Language Query: pergunta em linguagem natural gera SQL via LLM e executa automaticamente, com validacao de seguranca contra DDL/injection (SimpleNLQuery.pas)
+- **Ask** - Metodo DAO.Ask(pergunta) para Natural Language Query integrado ao DAO com AIClient (SimpleDAO.pas)
+- **TSimpleSwagger** - Geracao automatica de spec OpenAPI 3.0 a partir de entidades registradas via RTTI (SimpleSwagger.pas)
+- **EnableSwagger** - Integracao Horse: GET /swagger.json auto-gerado com TSimpleHorseRouter.EnableSwagger (SimpleHorseRouter.pas)
+- **TSimpleSeeder** - Smart Seeder: geracao de dados de teste realistas via LLM baseado no schema RTTI da entidade (SimpleSeeder.pas)
+- **TSimpleAutoIndex** - AI Auto-Index: analise de queries lentas com sugestao automatica de CREATE INDEX via LLM (SimpleAutoIndex.pas)
+- **TSimpleQueryLoggerCollector** - Logger que coleta queries em memoria para analise pelo AutoIndex (SimpleAutoIndex.pas)
+- **TSimpleQueryOptimizer** - AI Query Optimizer: analise e sugestao de otimizacao de SQL via LLM (SimpleQueryOptimizer.pas)
+- **TSkillQueryOptimizer** - Skill wrapper para Query Optimizer integravel ao DAO (SimpleQueryOptimizer.pas)
+- **TSkillTelegram** - Skill para envio de notificacoes via Telegram Bot API (SimpleSkillMessaging.pas)
+- **TSkillDiscord** - Skill para envio de notificacoes via Discord Webhook (SimpleSkillMessaging.pas)
+- **TSimpleExportSheets** - Exportacao de entidades para Google Sheets via API REST (SimpleExportSheets.pas)
+
+### Fixed
+- **SimpleLogger** - Inclusao de System.Variants para VarToStr e qualificacao de Format como System.SysUtils.Format (SimpleLogger.pas)
+- **SimpleTypes** - Inclusao de System.SysUtils para resolver declaracao de Exception em TSimpleErrorCallback (SimpleTypes.pas)
+- **SimpleInterface** - Forward declaration de iSimpleAIClient para garantir compatibilidade de referencias (SimpleInterface.pas)
+- **SimpleDAO** - Movidas units SimpleTypes e SimpleSkill para uses da interface para visibilidade de TSimpleErrorCallback e TSimpleSkillRunner (SimpleDAO.pas)
+- **SimpleValidator** - Qualificacao de todas as chamadas Format para System.SysUtils.Format evitando conflito com SimpleAttributes.Format (SimpleValidator.pas)
+- **SimpleSkill** - Inclusao de System.Classes e Winapi.Windows para TStringStream e OutputDebugString (SimpleSkill.pas)
+- **SimpleRTTI** - Remocao de redeclaracao de System.TypInfo na implementation uses (SimpleRTTI.pas)
+- **SimpleRTTI** - Variaveis inline LOrdinal movidas para bloco var em DataSetToEntity e DataSetToEntityList (SimpleRTTI.pas)
+- **SimpleRTTI** - Funcao TryStrToEnumOrdinal promovida para interface para corrigir erro E2506 em generics (SimpleRTTI.pas)
+- **SimpleAIProcessor** - Inclusao de SimpleAttributes na interface uses para visibilidade dos atributos AI (SimpleAIProcessor.pas)
+- **SimpleAgent** - Inclusao de System.Classes para TStringList e variaveis inline movidas para bloco var em Plan (SimpleAgent.pas)
+- **SimpleRules** - Variavel inline LFloat movida para bloco var em ParseSimpleExpression (SimpleRules.pas)
+- **SimpleRTTIHelper** - Unit RTTI qualificada para System.Rtti (SimpleRTTIHelper.pas)
+- **SimpleValidator** - Unit RTTI qualificada para System.Rtti (SimpleValidator.pas)
+- **SimpleRTTI** - Unit TypInfo qualificada para System.TypInfo e Variants para System.Variants (SimpleRTTI.pas)
+- **SimpleDAO** - Unit Variants qualificada para System.Variants (SimpleDAO.pas)
+- **SimpleUtil** - Unit SysUtils qualificada para System.SysUtils, removida dependencia FireDAC.Comp.Client desnecessaria (SimpleUtil.pas)
+- **SimpleJSON** - Units Classes e SysUtils qualificadas para System.Classes e System.SysUtils (SimpleJSON.pas)
+- **SimpleUtil** - DisableControls/EnableControls protegidos com try/finally em DataSetToObjectList (SimpleUtil.pas)
+- **SimpleDAO** - DisableControls/EnableControls protegidos com try/finally em Find (SimpleDAO.pas)
+- **SimpleSupabaseAuth** - Excecao de refresh de token agora loga mensagem em vez de ser engolida silenciosamente (SimpleSupabaseAuth.pas)
+- **SimpleSupabaseRealtime** - Erros de polling agora logam mensagem em vez de serem engolidos silenciosamente (SimpleSupabaseRealtime.pas)
+- **SimpleAISkill** - Adicionado metodo RunMode faltante nas 7 classes que implementam iSimpleSkill (SimpleAISkill.pas)
+- **SimpleDAO.DataSetToJSON** - Corrigida chamada a metodo inexistente DictionaryFieldClass, substituido por RTTI inline (SimpleDAO.DataSetToJSON.pas)
+- **SimpleMCPServer** - Corrigido destructor usando FreeAndNil em vez de Free (SimpleMCPServer.pas)
+- **SimpleMigration** - Qualificacao de SysUtils.Format para System.SysUtils.Format (SimpleMigration.pas)
+- **SimpleDAO** - Corrigido RelObj.Free para FreeAndNil(RelObj) em LoadRelationships (SimpleDAO.pas)
+- **SimpleQueryZeos** - ExecSQL agora faz Rollback antes de re-raise em caso de erro, seguindo padrao do FireDAC (SimpleQueryZeos.pas)
+- **SimpleQueryUnidac** - ExecSQL agora faz Rollback antes de re-raise em caso de erro, seguindo padrao do FireDAC (SimpleQueryUnidac.pas)
+- **SimpleHorseRouter** - Corrigido memory leak de TSimpleHorseRouterConfig com gerenciamento via class var e finalization (SimpleHorseRouter.pas)
+- **SimpleInterface** - Corrigida convencao de nomenclatura ISimpleRTTI para iSimpleRTTI (SimpleInterface.pas)
+- **SimpleRTTI** - Corrigida convencao de nomenclatura ISimpleRTTI para iSimpleRTTI (SimpleRTTI.pas)
+
 ## [3.06.00] - 2026-03-10
 
 ### Added

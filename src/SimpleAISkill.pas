@@ -29,6 +29,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAITranslate }
@@ -47,6 +48,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAISummarize }
@@ -65,6 +67,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAITags }
@@ -83,6 +86,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAIModerate }
@@ -100,6 +104,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAIValidate }
@@ -117,6 +122,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
   { AI Skill: TSkillAISentiment }
@@ -134,6 +140,7 @@ type
     function Execute(aEntity: TObject; aContext: iSimpleSkillContext): iSimpleSkill;
     function Name: String;
     function RunAt: TSkillRunAt;
+    function RunMode: TSkillRunMode;
   end;
 
 implementation
@@ -211,6 +218,11 @@ begin
   Result := FRunAt;
 end;
 
+function TSkillAIEnrich.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
+end;
+
 { TSkillAITranslate }
 
 constructor TSkillAITranslate.Create(const aSourceField, aTargetField, aTargetLanguage: String;
@@ -274,6 +286,11 @@ end;
 function TSkillAITranslate.RunAt: TSkillRunAt;
 begin
   Result := FRunAt;
+end;
+
+function TSkillAITranslate.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
 end;
 
 { TSkillAISummarize }
@@ -345,6 +362,11 @@ begin
   Result := FRunAt;
 end;
 
+function TSkillAISummarize.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
+end;
+
 { TSkillAITags }
 
 constructor TSkillAITags.Create(const aSourceField, aTargetField: String;
@@ -408,6 +430,11 @@ end;
 function TSkillAITags.RunAt: TSkillRunAt;
 begin
   Result := FRunAt;
+end;
+
+function TSkillAITags.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
 end;
 
 { TSkillAIModerate }
@@ -489,6 +516,11 @@ begin
   Result := FRunAt;
 end;
 
+function TSkillAIModerate.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
+end;
+
 { TSkillAIValidate }
 
 constructor TSkillAIValidate.Create(const aRule: String;
@@ -567,6 +599,11 @@ begin
   Result := FRunAt;
 end;
 
+function TSkillAIValidate.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
+end;
+
 { TSkillAISentiment }
 
 constructor TSkillAISentiment.Create(const aSourceField, aTargetField: String;
@@ -629,6 +666,11 @@ end;
 function TSkillAISentiment.RunAt: TSkillRunAt;
 begin
   Result := FRunAt;
+end;
+
+function TSkillAISentiment.RunMode: TSkillRunMode;
+begin
+  Result := srmNormal;
 end;
 
 end.

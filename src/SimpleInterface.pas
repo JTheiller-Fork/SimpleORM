@@ -21,6 +21,7 @@ type
   TSimpleCallback = reference to procedure(aEntity: TObject);
 
   iSimpleDAOSQLAttribute<T : class> = interface;
+  iSimpleAIClient = interface;
   iSimpleSkill = interface;
   iSimpleAgent = interface;
 
@@ -46,12 +47,14 @@ type
     function InsertBatch(aList: TObjectList<T>): iSimpleDAO<T>;
     function UpdateBatch(aList: TObjectList<T>): iSimpleDAO<T>;
     function DeleteBatch(aList: TObjectList<T>): iSimpleDAO<T>;
+    function BulkInsert(aList: TObjectList<T>): iSimpleDAO<T>;
     function SQL : iSimpleDAOSQLAttribute<T>;
     function Count: Integer;
     function Sum(const aField: String): Double;
     function Min(const aField: String): Double;
     function Max(const aField: String): Double;
     function Avg(const aField: String): Double;
+    function Exists(const aField: String; aValue: Variant): Boolean;
     function RegisterScope(const aName, aWhere: String): iSimpleDAO<T>;
     function Scope(const aName: String): iSimpleDAO<T>;
     function ClearScopes: iSimpleDAO<T>;
@@ -72,6 +75,7 @@ type
     function RawSQLWithParams(const aSQL: String; const aParamNames: array of String; const aParamValues: array of Variant): iSimpleDAO<T>;
     function FindRaw: TObjectList<T>;
     function ExecRawSQL(const aSQL: String): iSimpleDAO<T>;
+    function Ask(const aQuestion: String): TDataSet;
     function EnableCache: iSimpleDAO<T>;
     function DisableCache: iSimpleDAO<T>;
     function ClearCache: iSimpleDAO<T>;
@@ -102,7 +106,7 @@ type
 
   iSimpleRTTI<T : class> = interface
     ['{EEC49F47-24AC-4D82-9BEE-C259330A8993}']
-    function TableName(var aTableName: String): ISimpleRTTI<T>;
+    function TableName(var aTableName: String): iSimpleRTTI<T>;
     function ClassName (var aClassName : String) : iSimpleRTTI<T>;
     function DictionaryFields(var aDictionary : TDictionary<string, variant>) : iSimpleRTTI<T>;
     function DictionaryTypeFields(var aDictionary: TDictionary<string, TFieldType>): iSimpleRTTI<T>;

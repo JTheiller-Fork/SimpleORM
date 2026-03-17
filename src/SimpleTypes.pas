@@ -2,6 +2,9 @@ unit SimpleTypes;
 
 interface
 
+uses
+  System.SysUtils;
+
 type
   TSQLType = (Firebird, MySQL, SQLite, Oracle);
   TRuleAction = (raBeforeInsert, raAfterInsert, raBeforeUpdate, raAfterUpdate, raBeforeDelete, raAfterDelete);

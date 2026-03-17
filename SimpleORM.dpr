@@ -15,7 +15,15 @@ uses
   SimpleQuerySupabase in 'src\SimpleQuerySupabase.pas',
   SimpleSupabaseAuth in 'src\SimpleSupabaseAuth.pas',
   SimpleSupabaseRealtime in 'src\SimpleSupabaseRealtime.pas',
-  SimpleDataMigration in 'src\SimpleDataMigration.pas';
+  SimpleDataMigration in 'src\SimpleDataMigration.pas',
+  SimpleEvents in 'src\SimpleEvents.pas',
+  SimpleQueryOptimizer in 'src\SimpleQueryOptimizer.pas',
+  SimpleNLQuery in 'src\SimpleNLQuery.pas',
+  SimpleSwagger in 'src\SimpleSwagger.pas',
+  SimpleSeeder in 'src\SimpleSeeder.pas',
+  SimpleAutoIndex in 'src\SimpleAutoIndex.pas',
+  SimpleSkillMessaging in 'src\SimpleSkillMessaging.pas',
+  SimpleExportSheets in 'src\SimpleExportSheets.pas';
 
 {$R *.res}
 

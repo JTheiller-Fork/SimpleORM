@@ -106,14 +106,14 @@ begin
     tkFloat:
     begin
       if aHasFormat and (aPrecision > 0) then
-        Result := SysUtils.Format('NUMERIC(%d,%d)', [aMaxSize, aPrecision])
+        Result := System.SysUtils.Format('NUMERIC(%d,%d)', [aMaxSize, aPrecision])
       else
         Result := 'DOUBLE PRECISION';
     end;
     tkString, tkWChar, tkLString, tkWString, tkUString:
     begin
       if aHasFormat and (aMaxSize > 0) then
-        Result := SysUtils.Format('VARCHAR(%d)', [aMaxSize])
+        Result := System.SysUtils.Format('VARCHAR(%d)', [aMaxSize])
       else
         Result := 'VARCHAR(255)';
     end;

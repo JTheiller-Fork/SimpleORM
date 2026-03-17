@@ -4,7 +4,7 @@ unit SimpleValidator;
 interface
 
 uses
-  System.Classes, RTTI, SimpleAttributes, System.SysUtils, SimpleRTTIHelper,
+  System.Classes, System.Rtti, SimpleAttributes, System.SysUtils, SimpleRTTIHelper,
   System.RegularExpressions;
 
 type
@@ -130,7 +130,7 @@ begin
   case Value.Kind of
     tkUString:
       if string.IsNullOrWhiteSpace(Value.AsString) then
-        aErrros.Add(Format(sMSG_NOT_NULL, [aProperty.DisplayName]));
+        aErrros.Add(System.SysUtils.Format(sMSG_NOT_NULL, [aProperty.DisplayName]));
     tkInteger:
       ; // Integers always have a value in Delphi, NotNull is inherently satisfied
     tkFloat:
@@ -139,18 +139,18 @@ begin
           Exit;
 
         if (Value.TypeInfo = TypeInfo(Real)) or (Value.TypeInfo = TypeInfo(Double)) then
-          aErrros.Add(Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
+          aErrros.Add(System.SysUtils.Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
 
         if Value.TypeInfo = TypeInfo(TTime) then
-          aErrros.Add(Format(sMSG_TIME_NOT_NULL, [aProperty.DisplayName]));
+          aErrros.Add(System.SysUtils.Format(sMSG_TIME_NOT_NULL, [aProperty.DisplayName]));
 
         if (Value.TypeInfo = TypeInfo(TDate)) or (Value.TypeInfo = TypeInfo(TDateTime))
           then
-          aErrros.Add(Format(sMSG_DATE_NOT_NULL, [aProperty.DisplayName]));
+          aErrros.Add(System.SysUtils.Format(sMSG_DATE_NOT_NULL, [aProperty.DisplayName]));
       end;
   else
     if Value.IsEmpty then
-      aErrros.Add(Format(sMSG_NOT_NULL, [aProperty.DisplayName]));
+      aErrros.Add(System.SysUtils.Format(sMSG_NOT_NULL, [aProperty.DisplayName]));
   end;
 end;
 
@@ -163,10 +163,10 @@ begin
   case Value.Kind of
     tkInteger:
       if Value.AsInteger = 0 then
-        aErrros.Add(Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
+        aErrros.Add(System.SysUtils.Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
     tkFloat:
       if Value.AsExtended = 0 then
-        aErrros.Add(Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
+        aErrros.Add(System.SysUtils.Format(sMSG_NUMBER_NOT_NULL, [aProperty.DisplayName]));
   end;
 end;
 
@@ -185,9 +185,9 @@ begin
   begin
     Len := Length(Value.AsString);
     if (Fmt.MaxSize > 0) and (Len > Fmt.MaxSize) then
-      aErrors.Add(SysUtils.Format(sMSG_FORMAT_MAX, [aProperty.DisplayName, Fmt.MaxSize]));
+      aErrors.Add(System.SysUtils.Format(sMSG_FORMAT_MAX, [aProperty.DisplayName, Fmt.MaxSize]));
     if (Fmt.MinSize > 0) and (Len < Fmt.MinSize) then
-      aErrors.Add(SysUtils.Format(sMSG_FORMAT_MIN, [aProperty.DisplayName, Fmt.MinSize]));
+      aErrors.Add(System.SysUtils.Format(sMSG_FORMAT_MIN, [aProperty.DisplayName, Fmt.MinSize]));
   end;
 end;
 
@@ -204,7 +204,7 @@ begin
     if EmailStr <> '' then
     begin
       if not TRegEx.IsMatch(EmailStr, '^[^@\s]+@[^@\s]+\.[^@\s]+$') then
-        aErrors.Add(SysUtils.Format(sMSG_EMAIL, [aProperty.DisplayName]));
+        aErrors.Add(System.SysUtils.Format(sMSG_EMAIL, [aProperty.DisplayName]));
     end;
   end;
 end;
@@ -222,10 +222,10 @@ begin
   case Value.Kind of
     tkInteger:
       if Value.AsInteger < Attr.Value then
-        aErrors.Add(SysUtils.Format(sMSG_MIN_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
+        aErrors.Add(System.SysUtils.Format(sMSG_MIN_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
     tkFloat:
       if Value.AsExtended < Attr.Value then
-        aErrors.Add(SysUtils.Format(sMSG_MIN_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
+        aErrors.Add(System.SysUtils.Format(sMSG_MIN_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
   end;
 end;
 
@@ -242,10 +242,10 @@ begin
   case Value.Kind of
     tkInteger:
       if Value.AsInteger > Attr.Value then
-        aErrors.Add(SysUtils.Format(sMSG_MAX_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
+        aErrors.Add(System.SysUtils.Format(sMSG_MAX_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
     tkFloat:
       if Value.AsExtended > Attr.Value then
-        aErrors.Add(SysUtils.Format(sMSG_MAX_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
+        aErrors.Add(System.SysUtils.Format(sMSG_MAX_VALUE, [aProperty.DisplayName, FloatToStr(Attr.Value)]));
   end;
 end;
 
@@ -270,7 +270,7 @@ begin
         if Attr.Message <> '' then
           aErrors.Add(Attr.Message)
         else
-          aErrors.Add(SysUtils.Format(sMSG_REGEX, [aProperty.DisplayName]));
+          aErrors.Add(System.SysUtils.Format(sMSG_REGEX, [aProperty.DisplayName]));
       end;
     end;
   end;
@@ -315,7 +315,7 @@ begin
 
   if (Length(LCPF) <> 11) or AllSameDigits(LCPF) then
   begin
-    aErrors.Add(SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
     Exit;
   end;
 
@@ -328,7 +328,7 @@ begin
     LRest := 0;
   if LRest <> StrToInt(LCPF[10]) then
   begin
-    aErrors.Add(SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
     Exit;
   end;
 
@@ -340,7 +340,7 @@ begin
   if LRest = 10 then
     LRest := 0;
   if LRest <> StrToInt(LCPF[11]) then
-    aErrors.Add(SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CPF, [aProperty.DisplayName]));
 end;
 
 class procedure TSimpleValidator.ValidateCNPJ(const aErrors: TStrings; const aObject:
@@ -365,7 +365,7 @@ begin
 
   if (Length(LCNPJ) <> 14) or AllSameDigits(LCNPJ) then
   begin
-    aErrors.Add(SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
     Exit;
   end;
 
@@ -380,7 +380,7 @@ begin
     LRest := 11 - LRest;
   if LRest <> StrToInt(LCNPJ[13]) then
   begin
-    aErrors.Add(SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
     Exit;
   end;
 
@@ -394,7 +394,7 @@ begin
   else
     LRest := 11 - LRest;
   if LRest <> StrToInt(LCNPJ[14]) then
-    aErrors.Add(SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
+    aErrors.Add(System.SysUtils.Format(sMSG_CNPJ, [aProperty.DisplayName]));
 end;
 
 end.

@@ -15,6 +15,9 @@ uses
   Data.DB,
 
   SimpleRTTI,
+  SimpleRTTIHelper,
+  SimpleAttributes,
+  System.Rtti,
 
   DataSetConverter4D.Util;
 
@@ -100,12 +103,21 @@ var
   ss: TStringStream;
   DictionaryFields : TDictionary<String, String>;
   P : TParams;
+  LCtx: TRttiContext;
+  LType: TRttiType;
+  LProp: TRttiProperty;
 begin
   Result := TJSONObject.Create;
 
   DictionaryFields := TDictionary<String, String>.Create;
 
-  TSimpleRTTI<T>.DictionaryFieldClass(DictionaryFields);
+  LCtx := TRttiContext.Create;
+  LType := LCtx.GetType(TypeInfo(T));
+  for LProp in LType.GetProperties do
+  begin
+    if not LProp.IsIgnore then
+      DictionaryFields.AddOrSetValue(LProp.FieldName, LProp.FieldName);
+  end;
 
   try
     if Assigned(dataSet) and (not dataSet.IsEmpty) then
@@ -114,7 +126,8 @@ begin
       begin
         if dataSet.Fields[i].Visible then
         begin
-          key := DictionaryFields.Items[dataSet.Fields[i].FieldName];
+          if not DictionaryFields.TryGetValue(dataSet.Fields[i].FieldName, key) then
+            Continue;
           case dataSet.Fields[i].DataType of
             TFieldType.ftBoolean:
               begin

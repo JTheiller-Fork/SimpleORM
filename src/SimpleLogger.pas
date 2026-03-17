@@ -21,7 +21,8 @@ type
 implementation
 
 uses
-  System.SysUtils
+  System.SysUtils,
+  System.Variants
   {$IFDEF MSWINDOWS}
   , Winapi.Windows
   {$ENDIF};
@@ -43,7 +44,7 @@ var
   LogMsg: string;
   I: Integer;
 begin
-  LogMsg := SysUtils.Format('[SimpleORM] SQL: %s | Duration: %dms', [aSQL, aDurationMs]);
+  LogMsg := System.SysUtils.Format('[SimpleORM] SQL: %s | Duration: %dms', [aSQL, aDurationMs]);
   if Assigned(aParams) and (aParams.Count > 0) then
   begin
     LogMsg := LogMsg + ' | Params: ';

@@ -87,7 +87,7 @@ uses
   System.Generics.Collections,
   System.RTTI,
   Data.DB,
-  TypInfo,
+  System.TypInfo,
   {$IFNDEF CONSOLE}
     {$IFDEF FMX}
       FMX.Types,FMX.Forms, FMX.Edit, FMX.ListBox, FMX.StdCtrls, FMX.DateTimeCtrls,
@@ -117,7 +117,7 @@ Type
       constructor Create( aInstance : T );
       destructor Destroy; override;
       class function New( aInstance : T ) : iSimpleRTTI<T>;
-      function TableName(var aTableName: String): ISimpleRTTI<T>;
+      function TableName(var aTableName: String): iSimpleRTTI<T>;
 
       function Fields (var aFields : String) : iSimpleRTTI<T>;
       function FieldsInsert (var aFields : String) : iSimpleRTTI<T>;
@@ -138,13 +138,14 @@ Type
       {$ENDIF}
   end;
 
+function TryStrToEnumOrdinal(ATypeInfo: PTypeInfo; const AValue: string; out AOrdinal: Integer): Boolean;
+
 implementation
 
 uses
   SimpleAttributes,
-  Variants,
+  System.Variants,
   SimpleRTTIHelper,
-  System.TypInfo,
   System.UITypes;
 
 function TryStrToEnumOrdinal(ATypeInfo: PTypeInfo; const AValue: string; out AOrdinal: Integer): Boolean;
@@ -431,6 +432,7 @@ var
   prpRtti   : TRttiProperty;
   Info     : PTypeInfo;
   Value : TValue;
+  LOrdinal : Integer;
 begin
   Result := Self;
   aDataSet.First;
@@ -460,7 +462,6 @@ begin
                     Value := TValue.FromOrdinal(prpRtti.PropertyType.Handle, Field.AsInteger)
                   else
                   begin
-                    var LOrdinal: Integer;
                     if TryStrToEnumOrdinal(prpRtti.PropertyType.Handle, Field.AsString, LOrdinal) then
                       Value := TValue.FromOrdinal(prpRtti.PropertyType.Handle, LOrdinal)
                     else
@@ -501,6 +502,7 @@ var
   prpRtti   : TRttiProperty;
   Info     : PTypeInfo;
   Value : TValue;
+  LOrdinal : Integer;
 begin
   Result := Self;
   aList.Clear;
@@ -532,7 +534,6 @@ begin
                   Value := TValue.FromOrdinal(prpRtti.PropertyType.Handle, Field.AsInteger)
                 else
                 begin
-                  var LOrdinal: Integer;
                   if TryStrToEnumOrdinal(prpRtti.PropertyType.Handle, Field.AsString, LOrdinal) then
                     Value := TValue.FromOrdinal(prpRtti.PropertyType.Handle, LOrdinal)
                   else
@@ -894,7 +895,7 @@ begin
   end;
 end;
 
-function TSimpleRTTI<T>.TableName(var aTableName: String): ISimpleRTTI<T>;
+function TSimpleRTTI<T>.TableName(var aTableName: String): iSimpleRTTI<T>;
 var
   vInfo   : PTypeInfo;
   vCtxRtti: TRttiContext;
@@ -907,6 +908,9 @@ begin
     vTypRtti := vCtxRtti.GetType(vInfo);
     if vTypRtti.Tem<Tabela> then
       aTableName := vTypRtti.GetAttribute<Tabela>.Name;
+
+    if (aTableName = '') and vTypRtti.IsAutomapping then
+      aTableName := UpperCase(Copy(vTypRtti.Name, 2, Length(vTypRtti.Name)));
   finally
     vCtxRtti.Free;
   end;

@@ -196,6 +196,18 @@
       <li><a href="#supabase">Supabase</a> <span class="badge badge-new">NEW</span></li>
       <li><a href="#github-issue">GitHub Issue</a> <span class="badge badge-new">NEW</span></li>
       <li><a href="#data-migration">Data Migration</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#exists">Exists</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#automapping">Automapping</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#event-bus">Event Bus</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#bulk-insert">Bulk Insert</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#find-as">FindAs (DTO)</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#nl-query">Natural Language Query</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#swagger">Auto Swagger</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#seeder">Smart Seeder</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#auto-index">AI Auto-Index</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#query-optimizer">AI Query Optimizer</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#messaging">Telegram/Discord</a> <span class="badge badge-new">NEW</span></li>
+      <li><a href="#export-sheets">Google Sheets</a> <span class="badge badge-new">NEW</span></li>
     </ul>
   </nav>
 </aside>
@@ -1485,6 +1497,575 @@ finally
 end;</code></pre>
 
   <p class="note"><strong>Nota:</strong> A migracao usa transacoes automaticas por tabela. Em caso de erro, o rollback e feito apenas na tabela atual, preservando as tabelas ja migradas com sucesso.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="exists">
+  <h2>Exists <span class="badge badge-new">NEW</span></h2>
+  <p>Verifica se um registro existe no banco de dados sem carregar o objeto completo. Retorna <code>Boolean</code> diretamente, otimizado com <code>SELECT COUNT</code>.</p>
+
+  <h3>Uso basico</h3>
+  <pre><code>uses SimpleDAO, SimpleInterface;
+
+var LDAO := TSimpleDAO&lt;TCliente&gt;.New(LQuery);
+
+// Verificar por campo e valor
+if LDAO.Exists('EMAIL', 'usuario@email.com') then
+  Writeln('Email ja cadastrado');
+
+// Verificar por PK
+if LDAO.Exists('ID', 42) then
+  Writeln('Cliente com ID 42 existe');
+
+// Verificar com multiplos criterios via SQL
+if LDAO.SQL
+  .Where('CPF = :pCPF')
+  .Where('ATIVO = :pAtivo')
+  .&amp;End
+  .Exists then
+  Writeln('Cliente ativo com este CPF existe');</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Parametros</th><th>Retorno</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>Exists(aField, aValue)</code></td><td>Nome do campo, valor a buscar</td><td><code>Boolean</code></td><td>Verifica existencia por campo/valor</td></tr>
+      <tr><td><code>Exists</code></td><td>Nenhum (usa WHERE do SQL builder)</td><td><code>Boolean</code></td><td>Verifica existencia com filtros do SQL fluent</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> Internamente usa <code>SELECT COUNT(*)</code> com LIMIT 1 para performance maxima. Nao carrega dados da entidade.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="automapping">
+  <h2>Automapping <span class="badge badge-new">NEW</span></h2>
+  <p>Convencao sobre configuracao: com o atributo <code>[Automapping]</code>, o SimpleORM infere automaticamente o nome da tabela e das colunas a partir dos nomes da classe e propriedades, eliminando a necessidade de <code>[Tabela]</code> e <code>[Campo]</code> em cada property.</p>
+
+  <h3>Convencoes</h3>
+  <table>
+    <thead>
+      <tr><th>Elemento</th><th>Convencao</th><th>Exemplo</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Tabela</td><td>Nome da classe sem prefixo <code>T</code>, uppercase</td><td><code>TCliente</code> &rarr; <code>CLIENTE</code></td></tr>
+      <tr><td>Coluna</td><td>Nome da property, uppercase</td><td><code>NomeCompleto</code> &rarr; <code>NOMECOMPLETO</code></td></tr>
+      <tr><td>PK</td><td>Property chamada <code>Id</code> e automaticamente PK + AutoInc</td><td><code>property Id</code> &rarr; <code>[PK][AutoInc]</code></td></tr>
+      <tr><td>FK</td><td>Property com sufixo <code>Id</code> e tipo inteiro</td><td><code>CategoriaId</code> &rarr; <code>[FK]</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleAttributes;
+
+type
+  [Automapping]
+  TProduto = class
+  private
+    FId: Integer;
+    FNome: String;
+    FPreco: Double;
+    FCategoriaId: Integer;
+  published
+    property Id: Integer read FId write FId;                  // PK + AutoInc automatico
+    property Nome: String read FNome write FNome;             // Campo NOME
+    property Preco: Double read FPreco write FPreco;          // Campo PRECO
+    property CategoriaId: Integer read FCategoriaId write FCategoriaId; // FK automatico
+  end;
+
+// Equivalente a escrever manualmente:
+// [Tabela('PRODUTO')]
+// [Campo('ID')][PK][AutoInc] property Id
+// [Campo('NOME')] property Nome
+// [Campo('PRECO')] property Preco
+// [Campo('CATEGORIAID')][FK] property CategoriaId</code></pre>
+
+  <p class="note"><strong>Nota:</strong> Atributos explicitos (<code>[Campo]</code>, <code>[PK]</code>, etc.) tem prioridade sobre Automapping. Voce pode usar <code>[Automapping]</code> na classe e ainda sobrescrever campos individuais com atributos explicitos.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="event-bus">
+  <h2>Event Bus <span class="badge badge-new">NEW</span></h2>
+  <p>Sistema de eventos publish/subscribe que permite observar operacoes CRUD globalmente ou por entidade especifica. Desacoplamento total entre produtor e consumidor de eventos.</p>
+
+  <h3>Tipos de evento</h3>
+  <table>
+    <thead>
+      <tr><th>Evento</th><th>Descricao</th><th>Momento</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>seBeforeInsert</code></td><td>Antes de inserir</td><td>Pre-INSERT</td></tr>
+      <tr><td><code>seAfterInsert</code></td><td>Apos inserir com sucesso</td><td>Pos-INSERT</td></tr>
+      <tr><td><code>seBeforeUpdate</code></td><td>Antes de atualizar</td><td>Pre-UPDATE</td></tr>
+      <tr><td><code>seAfterUpdate</code></td><td>Apos atualizar com sucesso</td><td>Pos-UPDATE</td></tr>
+      <tr><td><code>seBeforeDelete</code></td><td>Antes de deletar</td><td>Pre-DELETE</td></tr>
+      <tr><td><code>seAfterDelete</code></td><td>Apos deletar com sucesso</td><td>Pos-DELETE</td></tr>
+      <tr><td><code>seOnError</code></td><td>Quando ocorre erro em qualquer operacao</td><td>Exception</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleEventBus;
+
+// Observer global — recebe eventos de TODAS as entidades
+TSimpleEventBus.Subscribe(seAfterInsert,
+  procedure(aEntity: TObject; aEvent: TSimpleEvent)
+  begin
+    Writeln('Inserido: ', aEntity.ClassName);
+  end);
+
+// Observer especifico — apenas para TProduto
+TSimpleEventBus.Subscribe(seAfterInsert, TProduto,
+  procedure(aEntity: TObject; aEvent: TSimpleEvent)
+  begin
+    var LProduto := TProduto(aEntity);
+    Writeln('Produto inserido: ', LProduto.Nome);
+  end);
+
+// Observer de erro
+TSimpleEventBus.Subscribe(seOnError,
+  procedure(aEntity: TObject; aEvent: TSimpleEvent)
+  begin
+    Writeln('Erro em ', aEntity.ClassName, ': ', aEvent.ErrorMessage);
+  end);
+
+// Remover observers
+TSimpleEventBus.Unsubscribe(seAfterInsert);         // remove global
+TSimpleEventBus.Unsubscribe(seAfterInsert, TProduto); // remove especifico
+TSimpleEventBus.Clear;                                // remove todos</code></pre>
+
+  <p class="note"><strong>Nota:</strong> O Event Bus e thread-safe e fire-and-forget. Excecoes nos observers sao capturadas e logadas via <code>iSimpleQueryLogger</code>, nunca interrompendo o fluxo CRUD principal.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="bulk-insert">
+  <h2>Bulk Insert <span class="badge badge-new">NEW</span></h2>
+  <p>Insercao em massa otimizada que gera um unico SQL com multiplos <code>VALUES</code>, significativamente mais rapido que <code>InsertBatch</code> (que executa INSERT individual para cada registro).</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleDAO, SimpleInterface;
+
+var
+  LDAO: iSimpleDAO&lt;TProduto&gt;;
+  LProdutos: TObjectList&lt;TProduto&gt;;
+begin
+  LProdutos := TObjectList&lt;TProduto&gt;.Create;
+  try
+    // Criar 1000 produtos
+    for var I := 1 to 1000 do
+    begin
+      var LProd := TProduto.Create;
+      LProd.Nome := 'Produto ' + IntToStr(I);
+      LProd.Preco := Random * 100;
+      LProdutos.Add(LProd);
+    end;
+
+    LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery);
+
+    // Bulk Insert — 1 SQL com 1000 VALUES
+    LDAO.BulkInsert(LProdutos);
+
+    // vs InsertBatch — 1000 SQLs individuais (mais lento)
+    // LDAO.InsertBatch(LProdutos);
+  finally
+    LProdutos.Free;
+  end;
+end;</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>SQL Gerado</th><th>Performance</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>BulkInsert(aList)</code></td><td><code>INSERT INTO T (A,B) VALUES (1,'x'),(2,'y'),(3,'z')</code></td><td>Rapido — 1 roundtrip</td></tr>
+      <tr><td><code>InsertBatch(aList)</code></td><td><code>INSERT INTO T (A,B) VALUES (:A,:B)</code> x N vezes</td><td>Lento — N roundtrips</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> BulkInsert usa transacao automatica. Campos <code>[AutoInc]</code> sao excluidos. Para Firebird, a sintaxe <code>INSERT INTO ... SELECT ... FROM RDB$DATABASE UNION ALL</code> e usada automaticamente.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="find-as">
+  <h2>FindAs (DTO) <span class="badge badge-new">NEW</span></h2>
+  <p>Permite executar SQL customizado e mapear o resultado para uma classe DTO (Data Transfer Object) que nao precisa ser uma entidade mapeada com <code>[Tabela]</code>. Ideal para relatorios, agregacoes e consultas complexas.</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleDAO, SimpleInterface;
+
+type
+  // DTO simples — nao precisa de [Tabela] nem [Campo]
+  TRelatorioProduto = class
+  private
+    FCATEGORIA: String;
+    FQUANTIDADE: Integer;
+    FTOTAL: Double;
+  published
+    property CATEGORIA: String read FCATEGORIA write FCATEGORIA;
+    property QUANTIDADE: Integer read FQUANTIDADE write FQUANTIDADE;
+    property TOTAL: Double read FTOTAL write FTOTAL;
+  end;
+
+var
+  LDAO: iSimpleDAO&lt;TProduto&gt;;
+  LLista: TObjectList&lt;TRelatorioProduto&gt;;
+begin
+  LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery);
+  LLista := TObjectList&lt;TRelatorioProduto&gt;.Create;
+  try
+    LDAO.RawSQL(
+      'SELECT CATEGORIA, COUNT(*) AS QUANTIDADE, SUM(PRECO) AS TOTAL ' +
+      'FROM PRODUTOS GROUP BY CATEGORIA ORDER BY TOTAL DESC'
+    ).FindAs&lt;TRelatorioProduto&gt;(LLista);
+
+    for var LItem in LLista do
+      Writeln(LItem.CATEGORIA, ': ', LItem.QUANTIDADE, ' itens, R$ ',
+        FormatFloat('#,##0.00', LItem.TOTAL));
+  finally
+    LLista.Free;
+  end;
+end;</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>RawSQL(aSQL)</code></td><td>Define SQL customizado para execucao</td></tr>
+      <tr><td><code>FindAs&lt;T&gt;(aList)</code></td><td>Executa o SQL e mapeia resultados para a lista de DTOs</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> O mapeamento e feito por nome: o alias do campo no SELECT deve corresponder ao nome da published property do DTO. Properties nao encontradas no DataSet sao ignoradas.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="nl-query">
+  <h2>Natural Language Query <span class="badge badge-new">NEW</span></h2>
+  <p>Consulte seu banco de dados usando linguagem natural em portugues ou ingles. O SimpleORM converte a pergunta em SQL usando AI, executa com seguranca e retorna o resultado formatado.</p>
+
+  <h3>Via DAO (modo simples)</h3>
+  <pre><code>uses SimpleDAO, SimpleAIClient;
+
+var LAI := TSimpleAIClient.New('sua-api-key', 'gpt-4');
+var LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery);
+
+// Pergunta direta — retorna texto formatado
+var LResposta := LDAO.AIClient(LAI).Ask('quais os 5 produtos mais caros?');
+Writeln(LResposta);
+
+// Resultado:
+// | NOME           | PRECO    |
+// |----------------|----------|
+// | Notebook Pro   | 8999.90  |
+// | iPhone 15      | 7499.00  |
+// ...</code></pre>
+
+  <h3>Via TSimpleNLQuery (modo avancado)</h3>
+  <pre><code>uses SimpleNLQuery, SimpleAIClient;
+
+var LNLQuery := TSimpleNLQuery.New(LQuery, LAI)
+  .RegisterEntity(TypeInfo(TProduto))
+  .RegisterEntity(TypeInfo(TCliente))
+  .RegisterEntity(TypeInfo(TPedido))
+  .MaxRows(50);
+
+// Pergunta com contexto de multiplas entidades
+var LResposta := LNLQuery.Ask('clientes que mais compraram no ultimo mes');
+Writeln(LResposta);
+
+// Obter o SQL gerado (para debug)
+Writeln('SQL: ', LNLQuery.LastSQL);</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>AIClient(aAI)</code></td><td>Configura o cliente AI no DAO para consultas NL</td></tr>
+      <tr><td><code>Ask(aPergunta)</code></td><td>Envia pergunta em linguagem natural e retorna resposta formatada</td></tr>
+      <tr><td><code>RegisterEntity(TypeInfo)</code></td><td>Registra entidade para contexto de schema (NLQuery)</td></tr>
+      <tr><td><code>MaxRows(N)</code></td><td>Limita quantidade de resultados</td></tr>
+      <tr><td><code>LastSQL</code></td><td>Retorna o ultimo SQL gerado pela AI</td></tr>
+    </tbody>
+  </table>
+
+  <p class="warning"><strong>Seguranca:</strong> Apenas SELECT e permitido. Keywords perigosas (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, EXEC, GRANT) sao bloqueadas automaticamente antes da execucao.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="swagger">
+  <h2>Auto Swagger <span class="badge badge-new">NEW</span></h2>
+  <p>Gera documentacao Swagger/OpenAPI 3.0 automaticamente a partir das entidades registradas no <code>TSimpleHorseRouter</code>. Zero configuracao manual — basta habilitar e acessar <code>/swagger.json</code>.</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleHorseRouter, SimpleQueryFiredac;
+
+var LQuery := TSimpleQueryFiredac.New(LConn);
+
+// Registrar entidades normalmente
+TSimpleHorseRouter.RegisterEntity&lt;TProduto&gt;(THorse, LQuery);
+TSimpleHorseRouter.RegisterEntity&lt;TCliente&gt;(THorse, LQuery);
+TSimpleHorseRouter.RegisterEntity&lt;TPedido&gt;(THorse, LQuery);
+
+// Habilitar Swagger — gera GET /swagger.json automaticamente
+TSimpleHorseRouter.EnableSwagger(THorse);
+
+// Customizar metadados (opcional)
+TSimpleHorseRouter.EnableSwagger(THorse)
+  .Title('Minha API')
+  .Version('1.0.0')
+  .Description('API gerada pelo SimpleORM');
+
+THorse.Listen(9000);
+// Acesse: http://localhost:9000/swagger.json</code></pre>
+
+  <h3>O que e gerado</h3>
+  <ul>
+    <li>Paths para cada entidade: GET (list + by id), POST, PUT, DELETE</li>
+    <li>Schemas com propriedades baseadas nos atributos <code>[Campo]</code></li>
+    <li>Parametros de paginacao (<code>skip</code>, <code>take</code>) em endpoints GET</li>
+    <li>Tipos de dados inferidos das properties Delphi (string, integer, number, boolean)</li>
+    <li>Respostas com status codes (200, 201, 204, 400, 404, 500)</li>
+  </ul>
+
+  <p class="note"><strong>Nota:</strong> O JSON gerado e compativel com Swagger UI, Postman e qualquer ferramenta OpenAPI 3.0. Nenhum JavaScript e adicionado ao servidor — apenas o endpoint JSON.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="seeder">
+  <h2>Smart Seeder <span class="badge badge-new">NEW</span></h2>
+  <p>Gera dados de teste realistas usando inteligencia artificial. O Seeder analisa a estrutura da entidade (tipos, nomes de campos, validacoes) e solicita a AI para gerar dados coerentes e contextualizados.</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleSeeder, SimpleAIClient;
+
+var LAI := TSimpleAIClient.New('sua-api-key', 'gpt-4');
+var LSeeder := TSimpleSeeder.New(LAI);
+
+// Gerar 50 produtos realistas e inserir no banco
+LSeeder.Query(LQuery).Seed&lt;TProduto&gt;(50);
+
+// Gerar sem inserir — retorna lista para inspecao
+var LProdutos := LSeeder.Generate&lt;TProduto&gt;(10);
+try
+  for var LProd in LProdutos do
+    Writeln(LProd.Nome, ' - R$ ', FormatFloat('#,##0.00', LProd.Preco));
+finally
+  LProdutos.Free;
+end;
+
+// Seed com contexto customizado
+LSeeder.Context('Loja de eletronicos no Brasil, precos em Reais')
+  .Query(LQuery)
+  .Seed&lt;TProduto&gt;(100);</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>TSimpleSeeder.New(aAI)</code></td><td>Cria instancia com cliente AI</td></tr>
+      <tr><td><code>Query(aQuery)</code></td><td>Define conexao para persistir dados gerados</td></tr>
+      <tr><td><code>Context(aText)</code></td><td>Adiciona contexto de negocio para dados mais realistas</td></tr>
+      <tr><td><code>Seed&lt;T&gt;(aCount)</code></td><td>Gera e insere N registros no banco</td></tr>
+      <tr><td><code>Generate&lt;T&gt;(aCount)</code></td><td>Gera N registros e retorna lista (sem persistir)</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> Respeita validacoes da entidade (<code>[NotNull]</code>, <code>[Format]</code>, <code>[MinValue]</code>, <code>[MaxValue]</code>, <code>[Email]</code>). Campos <code>[AutoInc]</code> sao ignorados. Usa <code>BulkInsert</code> quando disponivel para performance.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="auto-index">
+  <h2>AI Auto-Index <span class="badge badge-new">NEW</span></h2>
+  <p>Analisa a estrutura das entidades e o historico de queries para sugerir indices de banco de dados que melhoram a performance. Usa AI para identificar padroes de acesso e recomendar indices compostos.</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleAutoIndex, SimpleAIClient;
+
+var LAI := TSimpleAIClient.New('sua-api-key', 'gpt-4');
+var LAnalyzer := TSimpleAutoIndex.New(LAI)
+  .RegisterEntity(TypeInfo(TProduto))
+  .RegisterEntity(TypeInfo(TCliente))
+  .RegisterEntity(TypeInfo(TPedido))
+  .SQLType(TSQLType.MySQL);
+
+// Analisar e obter sugestoes
+var LSugestoes := LAnalyzer.Analyze;
+try
+  for var LSugestao in LSugestoes do
+  begin
+    Writeln('Tabela: ', LSugestao.TableName);
+    Writeln('Indice: ', LSugestao.IndexName);
+    Writeln('Campos: ', LSugestao.Fields);
+    Writeln('SQL: ', LSugestao.CreateSQL);
+    Writeln('Motivo: ', LSugestao.Reason);
+    Writeln('---');
+  end;
+finally
+  LSugestoes.Free;
+end;
+
+// Aplicar indices automaticamente (com confirmacao)
+LAnalyzer.Apply(LQuery);  // executa CREATE INDEX para cada sugestao</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>RegisterEntity(TypeInfo)</code></td><td>Registra entidade para analise de estrutura</td></tr>
+      <tr><td><code>SQLType(aType)</code></td><td>Define dialeto SQL para gerar DDL correto</td></tr>
+      <tr><td><code>Analyze</code></td><td>Retorna lista de sugestoes de indices</td></tr>
+      <tr><td><code>Apply(aQuery)</code></td><td>Executa CREATE INDEX das sugestoes no banco</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> Analisa automaticamente: campos PK/FK, campos usados em WHERE (via historico do Logger), relacionamentos HasOne/BelongsTo, e campos com alta cardinalidade.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="query-optimizer">
+  <h2>AI Query Optimizer <span class="badge badge-new">NEW</span></h2>
+  <p>Otimiza queries SQL usando inteligencia artificial. Analisa o SQL, identifica problemas de performance e sugere reescrita otimizada, mantendo compatibilidade com o dialeto do banco.</p>
+
+  <h3>Uso direto</h3>
+  <pre><code>uses SimpleQueryOptimizer, SimpleAIClient;
+
+var LAI := TSimpleAIClient.New('sua-api-key', 'gpt-4');
+var LOptimizer := TSimpleQueryOptimizer.New(LAI);
+
+var LResultado := LOptimizer.Optimize(
+  'SELECT * FROM PEDIDOS WHERE CLIENTE_ID IN (SELECT ID FROM CLIENTES WHERE CIDADE = ''SP'')',
+  TSQLType.MySQL
+);
+
+Writeln('SQL Original: ', LResultado.OriginalSQL);
+Writeln('SQL Otimizado: ', LResultado.OptimizedSQL);
+Writeln('Explicacao: ', LResultado.Explanation);
+Writeln('Melhoria estimada: ', LResultado.EstimatedImprovement);</code></pre>
+
+  <h3>Via Skill no DAO</h3>
+  <pre><code>uses SimpleSkill, SimpleQueryOptimizer;
+
+// Skill que otimiza automaticamente antes de executar
+LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery)
+  .Skill(TSkillQueryOptimizer.New(LAI));
+
+// Todas as queries passam pelo optimizer antes da execucao
+LDAO.Find;  // SQL e otimizado transparentemente</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>Optimize(aSQL, aSQLType)</code></td><td>Analisa e retorna SQL otimizado</td></tr>
+      <tr><td><code>TSkillQueryOptimizer.New(aAI)</code></td><td>Skill para otimizacao automatica no pipeline do DAO</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> O optimizer sugere JOINs em vez de subqueries, eliminacao de SELECT *, uso de indices, e reescrita de clausulas WHERE para melhor seletividade.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="messaging">
+  <h2>Telegram/Discord <span class="badge badge-new">NEW</span></h2>
+  <p>Skills para enviar notificacoes automaticas para <strong>Telegram</strong> e <strong>Discord</strong> quando operacoes CRUD ocorrem. Ideal para monitoramento, alertas e auditoria em tempo real.</p>
+
+  <h3>Telegram</h3>
+  <pre><code>uses SimpleSkill, SimpleTypes;
+
+// Notificar no Telegram apos cada Insert
+LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery)
+  .Skill(TSkillTelegram.New(
+    'bot_token_123456',   // Token do BotFather
+    '-1001234567890',     // Chat ID (grupo ou usuario)
+    srAfterInsert
+  ));
+
+// Com template customizado
+LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery)
+  .Skill(TSkillTelegram.New(
+    'bot_token_123456',
+    '-1001234567890',
+    srAfterInsert
+  ).MessageTemplate('Novo produto cadastrado: {entity} em {timestamp}'));</code></pre>
+
+  <h3>Discord</h3>
+  <pre><code>uses SimpleSkill, SimpleTypes;
+
+// Notificar no Discord via Webhook apos erros
+LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery)
+  .Skill(TSkillDiscord.New(
+    'https://discord.com/api/webhooks/123/abc',  // Webhook URL
+    srAfterInsert
+  ));
+
+// Com modo OnError — notifica apenas falhas
+LDAO := TSimpleDAO&lt;TProduto&gt;.New(LQuery)
+  .Skill(TSkillDiscord.New(
+    'https://discord.com/api/webhooks/123/abc',
+    srAfterInsert,
+    srmOnError
+  ));</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Skill</th><th>Parametros</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>TSkillTelegram</code></td><td>Token, ChatId, RunPoint</td><td>Envia mensagem via Telegram Bot API</td></tr>
+      <tr><td><code>TSkillDiscord</code></td><td>WebhookURL, RunPoint [, RunMode]</td><td>Envia mensagem via Discord Webhook</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> Ambas as skills sao fire-and-forget — erros de envio sao logados mas nunca interrompem o fluxo CRUD. Suportam os mesmos placeholders de template: <code>{entity}</code>, <code>{operation}</code>, <code>{error}</code>, <code>{timestamp}</code>.</p>
+</section>
+
+<!-- ============================================ -->
+<section id="export-sheets">
+  <h2>Google Sheets Export <span class="badge badge-new">NEW</span></h2>
+  <p>Exporta listas de entidades diretamente para uma planilha do <strong>Google Sheets</strong>. Headers sao gerados automaticamente a partir dos atributos <code>[Campo]</code> e os dados sao escritos via Google Sheets API v4.</p>
+
+  <h3>Exemplo</h3>
+  <pre><code>uses SimpleExportSheets;
+
+var LExporter := TSimpleExportSheets.New('seu-oauth-token')
+  .SpreadsheetId('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms')
+  .Sheet('Produtos');
+
+// Exportar lista de entidades
+var LProdutos: TObjectList&lt;TProduto&gt;;
+LDAO.Find(LProdutos);
+
+LExporter.Export&lt;TProduto&gt;(LProdutos);
+
+// Exportar com opcoes
+LExporter
+  .ClearBefore(True)       // Limpar planilha antes de exportar
+  .IncludeHeaders(True)    // Incluir headers (padrao: True)
+  .StartCell('A1')         // Celula inicial
+  .Export&lt;TProduto&gt;(LProdutos);</code></pre>
+
+  <table>
+    <thead>
+      <tr><th>Metodo</th><th>Descricao</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>TSimpleExportSheets.New(aToken)</code></td><td>Cria instancia com OAuth2 token do Google</td></tr>
+      <tr><td><code>SpreadsheetId(aId)</code></td><td>ID da planilha Google Sheets</td></tr>
+      <tr><td><code>Sheet(aName)</code></td><td>Nome da aba (sheet) destino</td></tr>
+      <tr><td><code>ClearBefore(aValue)</code></td><td>Limpar dados existentes antes de exportar</td></tr>
+      <tr><td><code>IncludeHeaders(aValue)</code></td><td>Incluir linha de headers com nomes dos campos</td></tr>
+      <tr><td><code>StartCell(aCell)</code></td><td>Celula inicial para escrita (ex: 'A1', 'B3')</td></tr>
+      <tr><td><code>Export&lt;T&gt;(aList)</code></td><td>Exporta lista de entidades para a planilha</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note"><strong>Nota:</strong> Requer OAuth2 token com escopo <code>https://www.googleapis.com/auth/spreadsheets</code>. Headers sao gerados a partir de <code>[Campo]</code> ou <code>[Display]</code> quando disponivel. Campos <code>[Ignore]</code> sao excluidos da exportacao.</p>
 </section>
 
 <footer>

@@ -4,6 +4,7 @@ interface
 
 uses
   SimpleInterface,
+  SimpleAttributes,
   SimpleAIAttributes,
   SimpleRTTIHelper,
   System.SysUtils,

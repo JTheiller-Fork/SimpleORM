@@ -5,6 +5,8 @@ interface
 uses
     SimpleInterface,
     SimpleLogger,
+    SimpleTypes,
+    SimpleSkill,
     System.RTTI,
     System.Generics.Collections,
     System.Classes,
@@ -78,11 +80,13 @@ Type
         function InsertBatch(aList: TObjectList<T>): iSimpleDAO<T>;
         function UpdateBatch(aList: TObjectList<T>): iSimpleDAO<T>;
         function DeleteBatch(aList: TObjectList<T>): iSimpleDAO<T>;
+        function BulkInsert(aList: TObjectList<T>): iSimpleDAO<T>;
         function Count: Integer;
         function Sum(const aField: String): Double;
         function Min(const aField: String): Double;
         function Max(const aField: String): Double;
         function Avg(const aField: String): Double;
+        function Exists(const aField: String; aValue: Variant): Boolean;
         function SQL: iSimpleDAOSQLAttribute<T>;
         function RegisterScope(const aName, aWhere: String): iSimpleDAO<T>;
         function Scope(const aName: String): iSimpleDAO<T>;
@@ -103,7 +107,9 @@ Type
         function RawSQL(const aSQL: String): iSimpleDAO<T>;
         function RawSQLWithParams(const aSQL: String; const aParamNames: array of String; const aParamValues: array of Variant): iSimpleDAO<T>;
         function FindRaw: TObjectList<T>;
+        function FindAs<R: class, constructor>(var aList: TObjectList<R>): iSimpleDAO<T>;
         function ExecRawSQL(const aSQL: String): iSimpleDAO<T>;
+        function Ask(const aQuestion: String): TDataSet;
         function EnableCache: iSimpleDAO<T>;
         function DisableCache: iSimpleDAO<T>;
         function ClearCache: iSimpleDAO<T>;
@@ -118,7 +124,6 @@ uses
     System.SysUtils,
     System.Diagnostics,
     SimpleAttributes,
-    SimpleTypes,
     System.TypInfo,
     SimpleRTTI,
     SimpleRTTIHelper,
@@ -127,9 +132,10 @@ uses
     SimpleAIProcessor,
     SimpleAIAttributes,
     SimpleRules,
-    SimpleSkill,
     SimpleAgent,
-    Variants;
+    SimpleEvents,
+    SimpleNLQuery,
+    System.Variants;
 { TGenericDAO }
 {$IFNDEF CONSOLE}
 
@@ -173,6 +179,7 @@ begin
     Result := Self;
     if Assigned(FOnBeforeDelete) then
       FOnBeforeDelete(aValue);
+    TSimpleEventBus.Notify(aValue, seBeforeDelete);
 
     // 1. Rules (Before)
     LRuleEngine := TSimpleRuleEngine.New(FAIClient);
@@ -211,6 +218,7 @@ begin
 
       if Assigned(FOnAfterDelete) then
         FOnAfterDelete(aValue);
+      TSimpleEventBus.Notify(aValue, seAfterDelete);
     except
       on E: Exception do
       begin
@@ -316,19 +324,22 @@ begin
       .DatabaseType(FQuery.SQLType)
       .Select(aSQL);
     FQuery.DataSet.DisableControls;
-    SW := TStopwatch.StartNew;
-    FQuery.Open(aSQL);
-    SW.Stop;
-    if Assigned(FLogger) then
-      FLogger.Log(aSQL, FQuery.Params, SW.ElapsedMilliseconds);
-    if aBindList then
-    begin
-        TSimpleRTTI<T>.New(nil).DataSetToEntityList(FQuery.DataSet, FList);
-        for I := 0 to FList.Count - 1 do
-            LoadRelationships(FList[I]);
+    try
+      SW := TStopwatch.StartNew;
+      FQuery.Open(aSQL);
+      SW.Stop;
+      if Assigned(FLogger) then
+        FLogger.Log(aSQL, FQuery.Params, SW.ElapsedMilliseconds);
+      if aBindList then
+      begin
+          TSimpleRTTI<T>.New(nil).DataSetToEntityList(FQuery.DataSet, FList);
+          for I := 0 to FList.Count - 1 do
+              LoadRelationships(FList[I]);
+      end;
+      FSQLAttribute.Clear;
+    finally
+      FQuery.DataSet.EnableControls;
     end;
-    FSQLAttribute.Clear;
-    FQuery.DataSet.EnableControls;
 end;
 
 function TSimpleDAO<T>.Find(aId: Integer): T;
@@ -432,6 +443,7 @@ begin
     Result := Self;
     if Assigned(FOnBeforeInsert) then
       FOnBeforeInsert(aValue);
+    TSimpleEventBus.Notify(aValue, seBeforeInsert);
 
     // 1. Rules (Before)
     LRuleEngine := TSimpleRuleEngine.New(FAIClient);
@@ -480,6 +492,7 @@ begin
 
       if Assigned(FOnAfterInsert) then
         FOnAfterInsert(aValue);
+      TSimpleEventBus.Notify(aValue, seAfterInsert);
     except
       on E: Exception do
       begin
@@ -571,6 +584,7 @@ begin
     Result := Self;
     if Assigned(FOnBeforeUpdate) then
       FOnBeforeUpdate(aValue);
+    TSimpleEventBus.Notify(aValue, seBeforeUpdate);
 
     // 1. Rules (Before)
     LRuleEngine := TSimpleRuleEngine.New(FAIClient);
@@ -619,6 +633,7 @@ begin
 
       if Assigned(FOnAfterUpdate) then
         FOnAfterUpdate(aValue);
+      TSimpleEventBus.Notify(aValue, seAfterUpdate);
     except
       on E: Exception do
       begin
@@ -778,7 +793,7 @@ begin
 
       if (RelTableName = '') or (RelPKName = '') then
       begin
-        RelObj.Free;
+        FreeAndNil(RelObj);
         Continue;
       end;
 
@@ -915,6 +930,158 @@ begin
   end;
 end;
 
+function TSimpleDAO<T>.BulkInsert(aList: TObjectList<T>): iSimpleDAO<T>;
+var
+  LTableName, LFields: String;
+  LSQL: String;
+  LDictFields: TDictionary<String, Variant>;
+  LDictTypeFields: TDictionary<String, TFieldType>;
+  LFieldType: TFieldType;
+  LFieldList: TList<String>;
+  LEnumCastMap: TDictionary<String, String>;
+  I, J, LBatchStart, LBatchEnd: Integer;
+  LParamName, LParamSQL, LEnumCast: String;
+  LBatchSize: Integer;
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LProp: TRttiProperty;
+  LInfo: PTypeInfo;
+  SW: TStopwatch;
+begin
+  Result := Self;
+  if aList.Count = 0 then
+    Exit;
+
+  LBatchSize := 100;
+
+  TSimpleRTTI<T>.New(aList[0]).TableName(LTableName);
+
+  LFieldList := TList<String>.Create;
+  try
+    LEnumCastMap := TDictionary<String, String>.Create;
+    try
+      LInfo := System.TypeInfo(T);
+      LContext := TRttiContext.Create;
+      try
+        LType := LContext.GetType(LInfo);
+        for LProp in LType.GetProperties do
+        begin
+          if LProp.IsAutoInc then
+            Continue;
+          if LProp.IsIgnore then
+            Continue;
+          LFieldList.Add(LProp.FieldName);
+
+          if LProp.IsEnum then
+            LEnumCastMap.Add(LProp.FieldName, '::' + LProp.EnumName)
+          else if LProp.IsUuid then
+            LEnumCastMap.Add(LProp.FieldName, '::uuid');
+        end;
+      finally
+        LContext.Free;
+      end;
+
+      if LFieldList.Count = 0 then
+        Exit;
+
+      LFields := '';
+      for J := 0 to LFieldList.Count - 1 do
+      begin
+        if J > 0 then
+          LFields := LFields + ', ';
+        LFields := LFields + LFieldList[J];
+      end;
+
+      FQuery.StartTransaction;
+      try
+        LBatchStart := 0;
+        while LBatchStart < aList.Count do
+        begin
+          LBatchEnd := LBatchStart + LBatchSize - 1;
+          if LBatchEnd >= aList.Count then
+            LBatchEnd := aList.Count - 1;
+
+          LSQL := 'INSERT INTO ' + LTableName + ' (' + LFields + ') VALUES ';
+
+          for I := LBatchStart to LBatchEnd do
+          begin
+            if I > LBatchStart then
+              LSQL := LSQL + ', ';
+            LSQL := LSQL + '(';
+            for J := 0 to LFieldList.Count - 1 do
+            begin
+              if J > 0 then
+                LSQL := LSQL + ', ';
+              LParamSQL := ':' + LFieldList[J] + '_' + IntToStr(I - LBatchStart);
+              if LEnumCastMap.TryGetValue(LFieldList[J], LEnumCast) then
+                LParamSQL := LParamSQL + LEnumCast;
+              LSQL := LSQL + LParamSQL;
+            end;
+            LSQL := LSQL + ')';
+          end;
+
+          FQuery.SQL.Clear;
+          FQuery.SQL.Add(LSQL);
+
+          for I := LBatchStart to LBatchEnd do
+          begin
+            LDictFields := TDictionary<String, Variant>.Create;
+            try
+              LDictTypeFields := TDictionary<String, TFieldType>.Create;
+              try
+                TSimpleRTTI<T>.New(aList[I]).DictionaryFields(LDictFields);
+                TSimpleRTTI<T>.New(aList[I]).DictionaryTypeFields(LDictTypeFields);
+                for J := 0 to LFieldList.Count - 1 do
+                begin
+                  LParamName := LFieldList[J] + '_' + IntToStr(I - LBatchStart);
+                  if FQuery.Params.FindParam(LParamName) <> nil then
+                  begin
+                    if LDictTypeFields.TryGetValue(LFieldList[J], LFieldType) then
+                      FQuery.Params.ParamByName(LParamName).DataType := LFieldType;
+                    if LDictFields.ContainsKey(LFieldList[J]) then
+                    begin
+                      if VarIsStr(LDictFields[LFieldList[J]]) and
+                         (Length(VarToStr(LDictFields[LFieldList[J]])) > 4000) then
+                        FQuery.Params.ParamByName(LParamName).AsMemo := VarToStr(LDictFields[LFieldList[J]])
+                      else
+                        FQuery.Params.ParamByName(LParamName).Value := LDictFields[LFieldList[J]];
+                    end;
+                  end;
+                end;
+              finally
+                FreeAndNil(LDictTypeFields);
+              end;
+            finally
+              FreeAndNil(LDictFields);
+            end;
+          end;
+
+          SW := TStopwatch.StartNew;
+          FQuery.ExecSQL;
+          SW.Stop;
+          if Assigned(FLogger) then
+            FLogger.Log(LSQL, FQuery.Params, SW.ElapsedMilliseconds);
+
+          LBatchStart := LBatchEnd + 1;
+        end;
+        FQuery.Commit;
+        if FCacheEnabled then
+          FCache.Clear;
+      except
+        on E: Exception do
+        begin
+          FQuery.Rollback;
+          raise;
+        end;
+      end;
+    finally
+      FreeAndNil(LEnumCastMap);
+    end;
+  finally
+    FreeAndNil(LFieldList);
+  end;
+end;
+
 function TSimpleDAO<T>.Count: Integer;
 var
   aSQL: String;
@@ -998,6 +1165,22 @@ begin
   FQuery.SQL.Add(aSQL);
   FQuery.Open;
   Result := FQuery.DataSet.Fields[0].AsFloat;
+end;
+
+function TSimpleDAO<T>.Exists(const aField: String; aValue: Variant): Boolean;
+var
+  aSQL: String;
+begin
+  TSimpleSQL<T>.New(nil)
+    .DatabaseType(FQuery.SQLType)
+    .Where(aField + ' = :pValue')
+    .Count(aSQL);
+
+  FQuery.SQL.Clear;
+  FQuery.SQL.Add(aSQL);
+  FQuery.Params.ParamByName('pValue').Value := aValue;
+  FQuery.Open;
+  Result := FQuery.DataSet.Fields[0].AsInteger > 0;
 end;
 
 procedure TSimpleDAO<T>.ApplyScopes;
@@ -1168,6 +1351,100 @@ begin
   TSimpleRTTI<T>.New(nil).DataSetToEntityList(FQuery.DataSet, Result);
   FRawSQL := '';
   FRawParams.Clear;
+end;
+
+function TSimpleDAO<T>.FindAs<R>(var aList: TObjectList<R>): iSimpleDAO<T>;
+var
+  aSQL: String;
+  LContext: TRttiContext;
+  LType: TRttiType;
+  LProp: TRttiProperty;
+  LField: TField;
+  LObj: R;
+  LFieldName: String;
+  LKey: String;
+begin
+  Result := Self;
+
+  if FRawSQL <> '' then
+  begin
+    FQuery.SQL.Clear;
+    FQuery.SQL.Add(FRawSQL);
+    for LKey in FRawParams.Keys do
+      FQuery.Params.ParamByName(LKey).Value := FRawParams[LKey];
+    FQuery.Open;
+    FRawSQL := '';
+    FRawParams.Clear;
+  end
+  else
+  begin
+    ApplyScopes;
+    TSimpleSQL<T>.New(nil).Fields(FSQLAttribute.Fields).Join(FSQLAttribute.Join)
+      .Where(FSQLAttribute.Where).GroupBy(FSQLAttribute.GroupBy)
+      .OrderBy(FSQLAttribute.OrderBy)
+      .Skip(FSQLAttribute.GetSkip)
+      .Take(FSQLAttribute.GetTake)
+      .DatabaseType(FQuery.SQLType)
+      .Select(aSQL);
+    FQuery.Open(aSQL);
+    FSQLAttribute.Clear;
+  end;
+
+  LContext := TRttiContext.Create;
+  try
+    LType := LContext.GetType(TypeInfo(R));
+    while not FQuery.DataSet.Eof do
+    begin
+      LObj := R.Create;
+      try
+        for LProp in LType.GetProperties do
+        begin
+          LFieldName := LProp.FieldName;
+
+          LField := FQuery.DataSet.FindField(LFieldName);
+          if (LField = nil) and LProp.EhCampo then
+            LField := FQuery.DataSet.FindField(LProp.Name);
+          if LField = nil then
+            Continue;
+
+          if LField.IsNull then
+            Continue;
+
+          case LProp.PropertyType.TypeKind of
+            tkInteger, tkInt64:
+              LProp.SetValue(Pointer(LObj), LField.AsInteger);
+            tkFloat:
+              LProp.SetValue(Pointer(LObj), LField.AsFloat);
+            tkUString, tkString, tkWString, tkLString:
+              LProp.SetValue(Pointer(LObj), LField.AsString);
+          end;
+        end;
+        aList.Add(LObj);
+      except
+        LObj.Free;
+        raise;
+      end;
+      FQuery.DataSet.Next;
+    end;
+  finally
+    LContext.Free;
+  end;
+end;
+
+function TSimpleDAO<T>.Ask(const aQuestion: String): TDataSet;
+var
+  LNLQuery: TSimpleNLQuery;
+begin
+  if FAIClient = nil then
+    raise Exception.Create('Ask requires an AI client. Call .AIClient(...) first.');
+
+  LNLQuery := TSimpleNLQuery.New(FQuery, FAIClient);
+  try
+    LNLQuery.RegisterEntity(System.TypeInfo(T));
+    Result := LNLQuery.Ask(aQuestion);
+  finally
+    FreeAndNil(LNLQuery);
+  end;
 end;
 
 function TSimpleDAO<T>.ExecRawSQL(const aSQL: String): iSimpleDAO<T>;

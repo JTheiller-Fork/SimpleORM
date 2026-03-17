@@ -76,7 +76,11 @@ begin
     FQuery.ExecSQL;
   except
     on E: Exception do
+    begin
+      if FConnection.InTransaction then
+        FConnection.Rollback;
       raise;
+    end;
   end;
 
   if Assigned(FParams) then

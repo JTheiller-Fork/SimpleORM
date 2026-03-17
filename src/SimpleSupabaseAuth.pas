@@ -37,6 +37,11 @@ type
 
 implementation
 
+{$IFDEF MSWINDOWS}
+uses
+  Winapi.Windows;
+{$ENDIF}
+
 { TSimpleSupabaseAuth }
 
 constructor TSimpleSupabaseAuth.Create(aBaseURL, aAPIKey: string);
@@ -257,7 +262,15 @@ begin
     try
       RefreshToken;
     except
-      { Swallow refresh failure - return current token }
+      on E: Exception do
+      begin
+        {$IFDEF MSWINDOWS}
+        OutputDebugString(PChar('[SimpleORM] Token refresh failed: ' + E.Message));
+        {$ENDIF}
+        {$IFDEF CONSOLE}
+        Writeln('[SimpleORM] Token refresh failed: ', E.Message);
+        {$ENDIF}
+      end;
     end;
   end;
 

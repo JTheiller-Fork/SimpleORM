@@ -2,7 +2,7 @@ unit SimpleJSON;
 
 interface
 
-uses Classes, SysUtils;
+uses System.Classes, System.SysUtils;
 
 type
   TcdJsonValueType = (jvNone, jvNull, jvString, jvNumber, jvBoolean, jvObject, jvArray);

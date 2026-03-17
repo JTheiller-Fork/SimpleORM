@@ -43,6 +43,9 @@ type
   NumberOnly = class(TCustomAttribute)
   end;
 
+  Automapping = class(TCustomAttribute)
+  end;
+
   Bind = class(TCustomAttribute)
   private
     FField: String;

@@ -5,7 +5,7 @@ interface
 uses
   SimpleAttributes,
   SimpleAIAttributes,
-  RTTI;
+  System.Rtti;
 
 type
   TCustomAttributeClass = class of TCustomAttribute;
@@ -66,6 +66,7 @@ type
     function IsTabela: Boolean;
     function IsSoftDelete: Boolean;
     function GetSoftDeleteField: string;
+    function IsAutomapping: Boolean;
   end;
 
   TRttiFieldHelper = class helper for TRttiField
@@ -357,6 +358,11 @@ begin
   Result := '';
   if Tem<SoftDelete> then
     Result := GetAttribute<SoftDelete>.FieldName;
+end;
+
+function TRttiTypeHelper.IsAutomapping: Boolean;
+begin
+  Result := Tem<Automapping>;
 end;
 
 function TRttiTypeHelper.Tem<T>: Boolean;

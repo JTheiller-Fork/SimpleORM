@@ -14,7 +14,11 @@ uses
   System.SysUtils,
   System.Math,
   System.Rtti,
-  System.Generics.Collections;
+  System.Classes,
+  System.Generics.Collections
+  {$IFDEF MSWINDOWS}
+  , Winapi.Windows
+  {$ENDIF};
 
 type
   ESimpleGuardDelete = class(Exception);

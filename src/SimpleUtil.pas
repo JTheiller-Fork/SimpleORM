@@ -36,7 +36,7 @@ implementation
 { TcdRTTIUtils }
 
 uses
-  System.Rtti, SysUtils, FireDAC.Comp.Client, SimpleRTTIHelper, SimpleAttributes;
+  System.Rtti, System.SysUtils, SimpleRTTIHelper, SimpleAttributes;
 
 class procedure TSimpleUtil.DataSetToObjectList<T>(const poDataSet: TDataSet; const
   poLista: TObjectList<T>);
@@ -44,15 +44,18 @@ var
   oObjeto: T;
 begin
   poDataSet.DisableControls;
-  poDataSet.First;
-  while not poDataSet.Eof do
-  begin
-    oObjeto := T.Create;
-    GetValuesFromDataset(poDataSet, oObjeto);
-    poLista.Add(oObjeto);
-    poDataSet.Next;
+  try
+    poDataSet.First;
+    while not poDataSet.Eof do
+    begin
+      oObjeto := T.Create;
+      GetValuesFromDataset(poDataSet, oObjeto);
+      poLista.Add(oObjeto);
+      poDataSet.Next;
+    end;
+  finally
+    poDataSet.EnableControls;
   end;
-  poDataSet.EnableControls;
 end;
 
 class procedure TSimpleUtil.DataSetToObjectList<T>(const poDataSet: TDataSet;
@@ -61,15 +64,18 @@ var
   oObjeto: T;
 begin
   poDataSet.DisableControls;
-  poDataSet.First;
-  while not poDataSet.Eof do
-  begin
-    oObjeto := T.Create;
-    oObjeto.Parse(poDataSet);
-    poLista.Add(oObjeto);
-    poDataSet.Next;
+  try
+    poDataSet.First;
+    while not poDataSet.Eof do
+    begin
+      oObjeto := T.Create;
+      oObjeto.Parse(poDataSet);
+      poLista.Add(oObjeto);
+      poDataSet.Next;
+    end;
+  finally
+    poDataSet.EnableControls;
   end;
-  poDataSet.EnableControls;
 end;
 
 class procedure TSimpleUtil.GetValuesFromDataset(const poDataset: TDataSet;

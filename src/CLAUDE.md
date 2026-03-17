@@ -132,3 +132,4 @@ end;
 - NUNCA concatenar valores do usuario em SQL — usar parametros (`:fieldname`)
 - Excecoes NUNCA devem ser engolidas silenciosamente — sempre `raise` apos cleanup
 - Memory management: usar try/finally para objetos, try/except para liberar em caso de erro
+agora p

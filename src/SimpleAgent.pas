@@ -8,6 +8,7 @@ uses
   SimpleRTTIHelper,
   SimpleTypes,
   SimpleSkill,
+  System.Classes,
   System.SysUtils,
   System.Rtti,
   System.TypInfo,
@@ -393,6 +394,9 @@ var
   LDescription: String;
   LSQL: String;
   LRisk: String;
+  LSteps: Integer;
+  LLines: TArray<String>;
+  LLine: String;
 begin
   if FAIClient = nil then
     raise Exception.Create('Agent proactive mode requires an AI client');
@@ -416,10 +420,10 @@ begin
 
   LDescription := '';
   LSQL := '';
-  var LSteps: Integer := 1;
+  LSteps := 1;
 
-  var LLines: TArray<String> := LResponse.Split([#13#10, #10]);
-  for var LLine in LLines do
+  LLines := LResponse.Split([#13#10, #10]);
+  for LLine in LLines do
   begin
     if LLine.StartsWith('DESCRICAO:') then
       LDescription := Trim(Copy(LLine, 11, Length(LLine)))

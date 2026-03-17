@@ -86,6 +86,11 @@ type
 
 implementation
 
+{$IFDEF MSWINDOWS}
+uses
+  Winapi.Windows;
+{$ENDIF}
+
 { TRealtimeListenerThread }
 
 constructor TRealtimeListenerThread.Create(aBaseURL, aAPIKey, aToken: String;
@@ -131,7 +136,15 @@ begin
         try
           PollTable(LSnapshots[I]);
         except
-          // Polling errors are caught silently to continue polling other tables
+          on E: Exception do
+          begin
+            {$IFDEF MSWINDOWS}
+            OutputDebugString(PChar('[SimpleORM] Realtime polling error: ' + E.Message));
+            {$ENDIF}
+            {$IFDEF CONSOLE}
+            Writeln('[SimpleORM] Realtime polling error: ', E.Message);
+            {$ENDIF}
+          end;
         end;
       end;
 

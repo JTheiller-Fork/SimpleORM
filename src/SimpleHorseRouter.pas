@@ -3,8 +3,11 @@ unit SimpleHorseRouter;
 interface
 
 uses
-  System.SysUtils, System.Rtti, System.JSON, System.Generics.Collections,
-  Horse, SimpleInterface, SimpleAttributes, SimpleDAO, SimpleRTTI, SimpleSerializer;
+  SimpleInterface, SimpleAttributes, SimpleDAO, SimpleRTTI, SimpleSerializer,
+  SimpleSwagger,
+  System.SysUtils, System.Rtti, System.JSON, System.TypInfo,
+  System.Generics.Collections,
+  Horse;
 
 type
   TEntityCallback = reference to procedure(aEntity: TObject; var aContinue: Boolean);
@@ -25,11 +28,21 @@ type
   end;
 
   TSimpleHorseRouter = class
+  private
+    class var FSwagger: TSimpleSwagger;
   public
     class function RegisterEntity<T: class, constructor>(
       aApp: THorse; aQuery: iSimpleQuery; aPath: string = ''
     ): TSimpleHorseRouterConfig;
+    class procedure EnableSwagger(aApp: THorse;
+      const aTitle: String = 'SimpleORM API';
+      const aVersion: String = '1.0.0');
+    class function GetSwagger: TSimpleSwagger;
+    class destructor Destroy;
   end;
+
+var
+  _RegisteredConfigs: TObjectList<TSimpleHorseRouterConfig>;
 
 implementation
 
@@ -61,6 +74,41 @@ end;
 
 { TSimpleHorseRouter }
 
+class destructor TSimpleHorseRouter.Destroy;
+begin
+  FreeAndNil(FSwagger);
+end;
+
+class function TSimpleHorseRouter.GetSwagger: TSimpleSwagger;
+begin
+  if FSwagger = nil then
+    FSwagger := TSimpleSwagger.Create;
+  Result := FSwagger;
+end;
+
+class procedure TSimpleHorseRouter.EnableSwagger(aApp: THorse;
+  const aTitle: String; const aVersion: String);
+begin
+  GetSwagger.Title(aTitle).Version(aVersion);
+
+  aApp.Get('/swagger.json',
+    procedure(Req: THorseRequest; Res: THorseResponse; Next: TProc)
+    var
+      LJSON: TJSONObject;
+    begin
+      try
+        LJSON := GetSwagger.Generate;
+        Res.Send<TJSONObject>(LJSON).Status(200);
+      except
+        on E: Exception do
+          Res.Send<TJSONObject>(
+            TJSONObject.Create.AddPair('error', E.Message)
+          ).Status(500);
+      end;
+    end
+  );
+end;
+
 class function TSimpleHorseRouter.RegisterEntity<T>(
   aApp: THorse; aQuery: iSimpleQuery; aPath: string): TSimpleHorseRouterConfig;
 var
@@ -69,6 +117,7 @@ var
   LTableName: string;
 begin
   LConfig := TSimpleHorseRouterConfig.Create;
+  _RegisteredConfigs.Add(LConfig);
   Result := LConfig;
 
   if aPath <> '' then
@@ -78,6 +127,10 @@ begin
     TSimpleRTTI<T>.New(nil).TableName(LTableName);
     LPath := '/' + LowerCase(LTableName);
   end;
+
+  { Register entity with Swagger if enabled }
+  if FSwagger <> nil then
+    FSwagger.RegisterEntity(System.TypeInfo(T), LPath);
 
   { GET /path - List all with optional skip/take }
   aApp.Get(LPath,
@@ -342,5 +395,11 @@ begin
     end
   );
 end;
+
+initialization
+  _RegisteredConfigs := TObjectList<TSimpleHorseRouterConfig>.Create(True);
+
+finalization
+  FreeAndNil(_RegisteredConfigs);
 
 end.

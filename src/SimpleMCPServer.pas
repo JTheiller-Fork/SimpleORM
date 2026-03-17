@@ -100,8 +100,8 @@ var
 begin
   for LPair in FTools do
     LPair.Value.InputSchema.Free;
-  FTools.Free;
-  FEntityInfos.Free;
+  FreeAndNil(FTools);
+  FreeAndNil(FEntityInfos);
   inherited;
 end;
 
